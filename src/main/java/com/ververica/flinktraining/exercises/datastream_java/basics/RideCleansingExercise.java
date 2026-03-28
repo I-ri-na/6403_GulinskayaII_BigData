@@ -19,7 +19,9 @@ package com.ververica.flinktraining.exercises.datastream_java.basics;
 import com.ververica.flinktraining.exercises.datastream_java.sources.TaxiRideSource;
 import com.ververica.flinktraining.exercises.datastream_java.datatypes.TaxiRide;
 import com.ververica.flinktraining.exercises.datastream_java.utils.ExerciseBase;
+import com.ververica.flinktraining.exercises.datastream_java.utils.GeoUtils;
 import com.ververica.flinktraining.exercises.datastream_java.utils.MissingSolutionException;
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -41,19 +43,29 @@ public class RideCleansingExercise extends ExerciseBase {
 		ParameterTool params = ParameterTool.fromArgs(args);
 		final String input = params.get("input", ExerciseBase.pathToRideData);
 
+		System.out.println("point 0");
+
 		final int maxEventDelay = 60;       // events are out of order by max 60 seconds
 		final int servingSpeedFactor = 600; // events of 10 minutes are served in 1 second
 
+		System.out.println("point 1");
+
 		// set up streaming execution environment
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-		env.setParallelism(ExerciseBase.parallelism);
+		env.setParallelism(ExecutionConfig.PARALLELISM_DEFAULT);
+
+		System.out.println("point 2");
 
 		// start the data generator
 		DataStream<TaxiRide> rides = env.addSource(rideSourceOrTest(new TaxiRideSource(input, maxEventDelay, servingSpeedFactor)));
 
+		System.out.println("point 3");
+
 		DataStream<TaxiRide> filteredRides = rides
 				// filter out rides that do not start or stop in NYC
 				.filter(new NYCFilter());
+
+		System.out.println("point 4");
 
 		// print the filtered stream
 		printOrTest(filteredRides);
@@ -62,12 +74,12 @@ public class RideCleansingExercise extends ExerciseBase {
 		env.execute("Taxi Ride Cleansing");
 	}
 
-	private static class NYCFilter implements FilterFunction<TaxiRide> {
-
+	public static class NYCFilter implements FilterFunction<TaxiRide> {
 		@Override
 		public boolean filter(TaxiRide taxiRide) throws Exception {
-			throw new MissingSolutionException();
+
+			return GeoUtils.isInNYC(taxiRide.startLon, taxiRide.startLat) &&
+					GeoUtils.isInNYC(taxiRide.endLon, taxiRide.endLat);
 		}
 	}
-
 }
